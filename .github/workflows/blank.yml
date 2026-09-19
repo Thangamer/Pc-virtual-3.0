@@ -1,0 +1,76 @@
+# Workflow para criar uma máquina virtual Windows no Azure
+name: Criar PC Virtual Windows
+
+# Permite executar manualmente pela aba Actions
+on:
+  workflow_dispatch:
+
+# Permissões necessárias para autenticação
+permissions:
+  id-token: write
+  contents: read
+
+# Configurações da máquina virtual
+env:
+  RESOURCE_GROUP: rg-pc-virtual
+  LOCATION: eastus
+  VM_NAME: PC-Windows
+  VM_SIZE: Standard_B2s
+  ADMIN_USER: rdpadmin
+
+jobs:
+  # Este trabalho cria e configura a máquina virtual
+  criar-pc-virtual:
+
+    # Máquina que executará a Action
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Faz login no Azure
+      - name: Entrar no Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Cria o grupo de recursos
+      - name: Criar grupo de recursos
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az group create \
+              --name "$RESOURCE_GROUP" \
+              --location "$LOCATION"
+
+      # Cria a máquina virtual Windows
+      - name: Criar máquina virtual
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az vm create \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$VM_NAME" \
+              --image Win2022Datacenter \
+              --size "$VM_SIZE" \
+              --admin-username "$ADMIN_USER" \
+              --admin-password '${{ secrets.WINDOWS_ADMIN_PASSWORD }}' \
+              --public-ip-sku Standard
+
+      # Obtém o endereço IP da máquina
+      - name: Obter IP da máquina
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            IP=$(az vm show \
+              --show-details \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$VM_NAME" \
+              --query publicIps \
+              --output tsv)
+
+            echo "PC VIRTUAL CRIADO"
+            echo "Nome: $VM_NAME"
+            echo "IP: $IP"
+            echo "Usuário: $ADMIN_USER"
