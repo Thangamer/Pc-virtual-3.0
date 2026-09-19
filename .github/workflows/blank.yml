@@ -1,0 +1,38 @@
+# Workflow para obter informações de rede de um Windows runner
+name: Windows - Informações de Rede
+
+# Permite executar manualmente pela aba Actions
+on:
+  workflow_dispatch:
+
+jobs:
+
+  # Executa em um computador Windows temporário
+  windows:
+    runs-on: windows-latest
+
+    steps:
+
+      # Mostra o nome do computador
+      - name: Nome do computador
+        shell: powershell
+        run: |
+          Write-Host "Nome: $env:COMPUTERNAME"
+
+      # Mostra os endereços IP disponíveis
+      - name: Mostrar IP
+        shell: powershell
+        run: |
+          Write-Host "Endereços IP:"
+          Get-NetIPAddress |
+            Where-Object {
+              $_.AddressFamily -eq "IPv4" -and
+              $_.IPAddress -notlike "127.*"
+            } |
+            Select-Object IPAddress, InterfaceAlias
+
+      # Mostra informações de rede
+      - name: Informações de rede
+        shell: powershell
+        run: |
+          ipconfig
